@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include <Arduino.h>
 #include "PicoSlugify.h"
 
@@ -77,9 +79,9 @@ uint32_t unidecode(const uint32_t codepoint) {
     }
 }
 
-String slugify(const String & input, const char replacement, bool merge_consecutive) {
+String slugify(const char * input, const char replacement, bool merge_consecutive) {
     // TODO: Consider in-place replacement to save memory
-    char output_buffer[input.length() + 1];
+    char output_buffer[strlen(input) + 1];
 
     // TODO: Don't emit leading/trailing replacements (optionally)
     bool last_was_replacement = false;
@@ -87,7 +89,7 @@ String slugify(const String & input, const char replacement, bool merge_consecut
     size_t output_index = 0;
 
     while (true) {
-        uint32_t codepoint = decode_utf8(input.c_str(), input_index);
+        uint32_t codepoint = decode_utf8(input, input_index);
 
         if (!codepoint) {
             break; // End of string or error
@@ -118,6 +120,27 @@ String slugify(const String & input, const char replacement, bool merge_consecut
     output_buffer[output_index] = '\0';
 
     return String(output_buffer);
+}
+
+String slugify(const String & input, const char replacement, bool merge_consecutive) {
+    return slugify(input.c_str(), replacement, merge_consecutive);
+}
+
+bool is_slug(const char c, const char replacement) {
+    return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == replacement);
+}
+
+bool is_slug(const char * s, const char replacement) {
+    for (; *s; ++s) {
+        if (!is_slug(*s, replacement)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool is_slug(const String & s, const char replacement) {
+    return is_slug(s.c_str(), replacement);
 }
 
 }
