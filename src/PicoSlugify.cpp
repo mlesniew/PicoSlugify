@@ -1,54 +1,75 @@
-#include <cstring>
+#include "PicoSlugify.h"
 
 #include <Arduino.h>
-#include "PicoSlugify.h"
+
+#include <cstring>
 
 namespace PicoSlugify {
 
-uint32_t decode_utf8(const char * str, size_t & index) {
-    // TODO: Check for string terminator in multibyte sequences
+static inline bool isContinuationByte(const uint8_t byte) {
+  return (byte & 0xC0) == 0x80;
+}
 
-    uint32_t codepoint = 0;
-    uint8_t byte = static_cast<uint8_t>(str[index]);
+uint32_t decodeUtf8(const char* str, size_t& index) {
+  uint32_t codepoint = 0;
+  const uint8_t byte = static_cast<uint8_t>(str[index]);
 
-    if (byte <= 0x7F) {
-        // 1-byte sequence
-        codepoint = byte;
-        index += 1;
-    } else if ((byte & 0xE0) == 0xC0) {
-        // 2-byte sequence
-        codepoint = byte & 0x1F;
-        index += 1;
-        codepoint = (codepoint << 6) | (static_cast<uint8_t>(str[index]) & 0x3F);
-        index += 1;
-    } else if ((byte & 0xF0) == 0xE0) {
-        // 3-byte sequence
-        codepoint = byte & 0x0F;
-        index += 1;
-        codepoint = (codepoint << 6) | (static_cast<uint8_t>(str[index]) & 0x3F);
-        index += 1;
-        codepoint = (codepoint << 6) | (static_cast<uint8_t>(str[index]) & 0x3F);
-        index += 1;
-    } else if ((byte & 0xF8) == 0xF0) {
-        // 4-byte sequence
-        codepoint = byte & 0x07;
-        index += 1;
-        codepoint = (codepoint << 6) | (static_cast<uint8_t>(str[index]) & 0x3F);
-        index += 1;
-        codepoint = (codepoint << 6) | (static_cast<uint8_t>(str[index]) & 0x3F);
-        index += 1;
-        codepoint = (codepoint << 6) | (static_cast<uint8_t>(str[index]) & 0x3F);
-        index += 1;
-    } else {
-        // Invalid UTF-8 byte
-        index += 1; // Skip invalid byte
+  if (!byte) {
+    return 0;
+  }
+
+  if (byte <= 0x7F) {
+    // 1-byte sequence
+    codepoint = byte;
+    index += 1;
+  } else if ((byte & 0xE0) == 0xC0) {
+    // 2-byte sequence
+    const uint8_t b1 = static_cast<uint8_t>(str[index + 1]);
+    if (!b1 || !isContinuationByte(b1)) {
+      index += 1;
+      return 0xFFFD;
     }
+    codepoint = byte & 0x1F;
+    codepoint = (codepoint << 6) | (b1 & 0x3F);
+    index += 2;
+  } else if ((byte & 0xF0) == 0xE0) {
+    // 3-byte sequence
+    const uint8_t b1 = static_cast<uint8_t>(str[index + 1]);
+    const uint8_t b2 = static_cast<uint8_t>(str[index + 2]);
+    if (!b1 || !b2 || !isContinuationByte(b1) || !isContinuationByte(b2)) {
+      index += 1;
+      return 0xFFFD;
+    }
+    codepoint = byte & 0x0F;
+    codepoint = (codepoint << 6) | (b1 & 0x3F);
+    codepoint = (codepoint << 6) | (b2 & 0x3F);
+    index += 3;
+  } else if ((byte & 0xF8) == 0xF0) {
+    // 4-byte sequence
+    const uint8_t b1 = static_cast<uint8_t>(str[index + 1]);
+    const uint8_t b2 = static_cast<uint8_t>(str[index + 2]);
+    const uint8_t b3 = static_cast<uint8_t>(str[index + 3]);
+    if (!b1 || !b2 || !b3 || !isContinuationByte(b1) ||
+        !isContinuationByte(b2) || !isContinuationByte(b3)) {
+      index += 1;
+      return 0xFFFD;
+    }
+    codepoint = byte & 0x07;
+    codepoint = (codepoint << 6) | (b1 & 0x3F);
+    codepoint = (codepoint << 6) | (b2 & 0x3F);
+    codepoint = (codepoint << 6) | (b3 & 0x3F);
+    index += 4;
+  } else {
+    // Invalid UTF-8 byte
+    index += 1;  // Skip invalid byte
+    codepoint = 0xFFFD;
+  }
 
-    return codepoint;
+  return codepoint;
 }
 
 uint32_t unidecode(const uint32_t codepoint) {
-    switch (codepoint) {
+  switch (codepoint) {
 #ifdef PICOSLUGIFY_UNIDECODE_GERMAN
     case 0x00E4:
       return 'a';  // ä
@@ -108,68 +129,76 @@ uint32_t unidecode(const uint32_t codepoint) {
   }
 }
 
-String slugify(const char * input, const char replacement, bool merge_consecutive) {
-    // TODO: Consider in-place replacement to save memory
-    char output_buffer[strlen(input) + 1];
+String slugify(const char* input, const char replacement,
+               bool mergeConsecutive) {
+  if (!input) {
+    return String();
+  }
 
-    // TODO: Don't emit leading/trailing replacements (optionally)
-    bool last_was_replacement = false;
-    size_t input_index = 0;
-    size_t output_index = 0;
+  String output;
+  output.reserve(strlen(input) + 1);
 
-    while (true) {
-        uint32_t codepoint = decode_utf8(input, input_index);
+  // TODO: Don't emit leading/trailing replacements (optionally)
+  bool last_was_replacement = false;
+  size_t input_index = 0;
 
-        if (!codepoint) {
-            break; // End of string or error
-        }
+  while (true) {
+    uint32_t codepoint = decodeUtf8(input, input_index);
 
-        // Apply unidecode
-        codepoint = unidecode(codepoint);
-
-        // Convert to lowercase
-        if (codepoint >= 'A' && codepoint <= 'Z') {
-            codepoint ^= ' ';  // ASCII lowercase conversion
-        }
-
-        // Check if alphanumeric
-        if ((codepoint >= 'a' && codepoint <= 'z') || (codepoint >= '0' && codepoint <= '9')
-                || (codepoint == uint32_t(replacement))) {
-            output_buffer[output_index++] = static_cast<char>(codepoint);
-            last_was_replacement = false;
-        } else {
-            // Replace non-alphanumeric with hyphen
-            if (!merge_consecutive || !last_was_replacement) {
-                output_buffer[output_index++] = replacement;
-            }
-            last_was_replacement = true;
-        }
+    if (!codepoint) {
+      break;  // End of string or error
     }
 
-    output_buffer[output_index] = '\0';
+    // Apply unidecode
+    codepoint = unidecode(codepoint);
 
-    return String(output_buffer);
-}
-
-String slugify(const String & input, const char replacement, bool merge_consecutive) {
-    return slugify(input.c_str(), replacement, merge_consecutive);
-}
-
-bool is_slug(const char c, const char replacement) {
-    return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == replacement);
-}
-
-bool is_slug(const char * s, const char replacement) {
-    for (; *s; ++s) {
-        if (!is_slug(*s, replacement)) {
-            return false;
-        }
+    // Convert to lowercase
+    if (codepoint >= 'A' && codepoint <= 'Z') {
+      codepoint ^= ' ';  // ASCII lowercase conversion
     }
-    return true;
+
+    // Check if alphanumeric
+    if ((codepoint >= 'a' && codepoint <= 'z') ||
+        (codepoint >= '0' && codepoint <= '9') ||
+        (codepoint == uint32_t(replacement))) {
+      output += static_cast<char>(codepoint);
+      last_was_replacement = false;
+    } else {
+      // Replace non-alphanumeric with hyphen
+      if (!mergeConsecutive || !last_was_replacement) {
+        output += replacement;
+      }
+      last_was_replacement = true;
+    }
+  }
+
+  return output;
 }
 
-bool is_slug(const String & s, const char replacement) {
-    return is_slug(s.c_str(), replacement);
+String slugify(const String& input, const char replacement,
+               bool mergeConsecutive) {
+  return slugify(input.c_str(), replacement, mergeConsecutive);
 }
 
+bool isSlug(const char c, const char replacement) {
+  return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || (c == replacement);
 }
+
+bool isSlug(const char* s, const char replacement) {
+  if (!s) {
+    return false;
+  }
+
+  for (; *s; ++s) {
+    if (!isSlug(*s, replacement)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool isSlug(const String& s, const char replacement) {
+  return isSlug(s.c_str(), replacement);
+}
+
+}  // namespace PicoSlugify
