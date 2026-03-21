@@ -82,6 +82,6 @@ Currently supported languages:
 
 ## Examples
 
-- `examples/Basic` — demonstrates `slugify(...)`
+- `examples/Slugify` — demonstrates `slugify(...)`
 - `examples/Unidecode` — demonstrates string-level `unidecode(...)`
 - `examples/IsSlug` — demonstrates `isSlug(...)`

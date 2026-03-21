@@ -1,0 +1,42 @@
+{
+  "name": "PicoSlugify",
+  "version": "0.1.0",
+  "description": "Lightweight slugify, unidecode, and slug validation library for Arduino.",
+  "keywords": [
+    "slugify",
+    "unidecode",
+    "transliteration",
+    "utf-8",
+    "arduino",
+    "text"
+  ],
+  "authors": [
+    {
+      "name": "Michał Leśniewski",
+      "email": "mlesniew@gmail.com",
+      "maintainer": true
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mlesniew/PicoSlugify.git"
+  },
+  "homepage": "https://github.com/mlesniew/PicoSlugify",
+  "license": "GPL-3.0-only",
+  "frameworks": "arduino",
+  "platforms": "*",
+  "headers": "PicoSlugify.h",
+  "examples": [
+    "examples/Slugify",
+    "examples/Unidecode",
+    "examples/IsSlug"
+  ],
+  "export": {
+    "exclude": [
+      ".github",
+      ".vscode",
+      "**/.DS_Store",
+      "**/.pio"
+    ]
+  }
+}
