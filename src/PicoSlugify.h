@@ -15,6 +15,10 @@ uint32_t decodeUtf8(const char* str, size_t& index);
 // Convert a Unicode codepoint to its closest ASCII representation
 uint32_t unidecode(const uint32_t codepoint);
 
+// Apply unidecode to a UTF-8 encoded string
+String unidecode(const char* input);
+String unidecode(const String& input);
+
 // Generate a slug from the input string
 String slugify(const char* input, const char replacement = '_',
                bool mergeConsecutive = true);

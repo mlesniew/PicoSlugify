@@ -20,3 +20,9 @@ void setup() {
     Serial.println(PicoSlugify::slugify("Żółć_#3"));  // prints zolc_3
 }
 ```
+
+## Examples
+
+- `examples/Basic` — demonstrates `slugify(...)`
+- `examples/Unidecode` — demonstrates string-level `unidecode(...)`
+- `examples/IsSlug` — demonstrates `isSlug(...)`

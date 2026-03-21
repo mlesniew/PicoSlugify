@@ -129,6 +129,35 @@ uint32_t unidecode(const uint32_t codepoint) {
   }
 }
 
+String unidecode(const char* input) {
+  if (!input) {
+    return String();
+  }
+
+  String output;
+  output.reserve(strlen(input) + 1);
+
+  size_t inputIndex = 0;
+
+  while (true) {
+    uint32_t codepoint = decodeUtf8(input, inputIndex);
+
+    if (!codepoint) {
+      break;
+    }
+
+    codepoint = unidecode(codepoint);
+
+    if (codepoint <= 0x7F) {
+      output += static_cast<char>(codepoint);
+    }
+  }
+
+  return output;
+}
+
+String unidecode(const String& input) { return unidecode(input.c_str()); }
+
 String slugify(const char* input, const char replacement,
                bool mergeConsecutive) {
   if (!input) {
