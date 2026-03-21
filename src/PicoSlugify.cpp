@@ -50,33 +50,62 @@ uint32_t decode_utf8(const char * str, size_t & index) {
 uint32_t unidecode(const uint32_t codepoint) {
     switch (codepoint) {
 #ifdef PICOSLUGIFY_UNIDECODE_GERMAN
-        case 0x00E4: return 'a'; // ä
-        case 0x00C4: return 'A'; // Ä
-        case 0x00F6: return 'o'; // ö
-        case 0x00D6: return 'O'; // Ö
-        case 0x00FC: return 'u'; // ü
-        case 0x00DC: return 'U'; // Ü
-        case 0x00DF: return 's'; // ß
+    case 0x00E4:
+      return 'a';  // ä
+    case 0x00C4:
+      return 'A';  // Ä
+    case 0x00F6:
+      return 'o';  // ö
+    case 0x00D6:
+      return 'O';  // Ö
+    case 0x00FC:
+      return 'u';  // ü
+    case 0x00DC:
+      return 'U';  // Ü
+    case 0x00DF:
+      return 's';  // ß
 #endif
 #ifdef PICOSLUGIFY_UNIDECODE_POLISH
-        case 0x0105: return 'a'; // ą
-        case 0x0104: return 'A'; // Ą
-        case 0x0119: return 'e'; // ę
-        case 0x0118: return 'E'; // Ę
-        case 0x0142: return 'l'; // ł
-        case 0x0141: return 'L'; // Ł
-        case 0x00F3: return 'o'; // ó
-        case 0x00D3: return 'O'; // Ó
-        case 0x015B: return 's'; // ś
-        case 0x015A: return 'S'; // Ś
-        case 0x017C: return 'z'; // ź
-        case 0x017B: return 'Z'; // Ź
-        case 0x017A: return 'z'; // ż
-        case 0x0179: return 'Z'; // Ż
+    case 0x0105:
+      return 'a';  // ą
+    case 0x0104:
+      return 'A';  // Ą
+    case 0x0107:
+      return 'c';  // ć
+    case 0x0106:
+      return 'C';  // Ć
+    case 0x0119:
+      return 'e';  // ę
+    case 0x0118:
+      return 'E';  // Ę
+    case 0x0142:
+      return 'l';  // ł
+    case 0x0141:
+      return 'L';  // Ł
+    case 0x0144:
+      return 'n';  // ń
+    case 0x0143:
+      return 'N';  // Ń
+    case 0x00F3:
+      return 'o';  // ó
+    case 0x00D3:
+      return 'O';  // Ó
+    case 0x015B:
+      return 's';  // ś
+    case 0x015A:
+      return 'S';  // Ś
+    case 0x017C:
+      return 'z';  // ź
+    case 0x017B:
+      return 'Z';  // Ź
+    case 0x017A:
+      return 'z';  // ż
+    case 0x0179:
+      return 'Z';  // Ż
 #endif
-        default:
-            return codepoint;
-    }
+    default:
+      return codepoint;
+  }
 }
 
 String slugify(const char * input, const char replacement, bool merge_consecutive) {
