@@ -1,2 +1,5 @@
-.pio
 .vscode
+.pio
+.env
+*.orig
+*.tar.gz
